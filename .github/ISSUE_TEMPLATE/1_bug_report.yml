@@ -1,0 +1,84 @@
+name: 🐞 Bug Report
+description: Report a problem to help us improve
+type: "Bug"
+assignees: [ ]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        🙏 Thank you for taking the time to report a bug!
+        Please fill out the details below so we can help you resolve the issue faster ⚡
+
+        Before submitting, please note:
+        - If logs are lengthy, please upload them as a file or attachment instead of pasting them inline.
+        - When sharing code or logs, wrap them in code blocks (```).
+        - Providing the diagnostic information below will significantly accelerate troubleshooting.
+
+  - type: input
+    id: gpustack-version
+    attributes:
+      label: GPUStack version
+      placeholder: e.g. v0.7.1
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System & CPU Architecture
+      placeholder: e.g. Ubuntu 22.04, x86_64
+    validations:
+      required: false
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU
+      placeholder: e.g. NVIDIA A100 40GB
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: ▶️ Steps to reproduce
+      description: How can we reproduce the behavior?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: ❌ Actual result
+      description: What happened?
+      placeholder: The actual behavior you observed
+    validations:
+      required: false
+
+  - type: textarea
+    id: accelerator-diagnosis
+    attributes:
+      label: 🔍 Accelerator detection diagnosis (if applicable)
+      description: |
+        If detection fails, run the following diagnostic command inside the problematic worker container and provide the output: `time GPUSTACK_RUNTIME_LOG_LEVEL=debug GPUSTACK_RUNTIME_LOG_EXCEPTION=1 gpustack-runtime detect --format json`.
+      placeholder: |
+        Output(wrap with code block)
+    validations:
+      required: false
+
+  - type: textarea
+    id: model-deployment-diagnosis
+    attributes:
+      label: 🐳 Model deployment / container diagnosis (if applicable)
+      description: |
+        If deploying fails, run the following diagnostic command inside the problematic worker container and provide the output: `gpustack-runtime inspect <model instance name>`.
+      placeholder: |
+        Output(wrap with code block or file attachment)
+    validations:
+      required: false

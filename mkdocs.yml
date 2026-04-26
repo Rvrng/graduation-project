@@ -1,0 +1,189 @@
+site_name: GPUStack
+site_url: https://docs.gpustack.ai
+theme:
+  name: material
+  logo: assets/logo-white.png
+  favicon: assets/logo.png
+  custom_dir: docs/overrides
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: orange
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: light blue
+      accent: orange
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to light mode
+  features:
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - navigation.indexes
+    - content.tooltips
+    - navigation.path
+    - navigation.tabs
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.action.view
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github-alt
+  language: en
+plugins:
+  - glightbox
+  - search
+  - redirects:
+      redirect_maps:
+        'installation/nvidia/installation.md': 'installation/requirements.md'
+        'installation/amd/installation.md': 'installation/requirements.md'
+        'installation/ascend/installation.md': 'installation/requirements.md'
+        'installation/hygon/installation.md': 'installation/requirements.md'
+        'installation/mthreads/installation.md': 'installation/requirements.md'
+        'installation/iluvatar/installation.md': 'installation/requirements.md'
+        'installation/cambricon/installation.md': 'installation/requirements.md'
+        'installation/metax/installation.md': 'installation/requirements.md'
+extra:
+  generator: false
+  version:
+    provider: mike
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+extra_css:
+  - stylesheets/extra.css
+  - https://unpkg.com/katex@0/dist/katex.min.css
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - sane_lists
+  - pymdownx.details
+  - pymdownx.tilde
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.arithmatex:
+      generic: true
+repo_url: https://github.com/gpustack/gpustack
+edit_uri: edit/main/docs/
+nav:
+  - Home:
+      - Overview: overview.md
+      - Quickstart: quickstart.md
+      - Installation: 
+          - Requirements: installation/requirements.md
+          - Installation: installation/installation.md
+          - Air-Gapped Installation: installation/air-gapped.md
+          - Uninstallation: installation/uninstallation.md
+      - Upgrade: upgrade.md
+      - Migration: migration.md
+      - User Guide:
+          - Playground:
+              - Playgound: user-guide/playground/index.md
+              - Chat: user-guide/playground/chat.md
+              - Image: user-guide/playground/image.md
+              - Audio: user-guide/playground/audio.md
+              - Embedding: user-guide/playground/embedding.md
+              - Rerank: user-guide/playground/rerank.md
+          - Model Catalog: user-guide/model-catalog.md
+          - Model Deployment Management: user-guide/model-deployment-management.md
+          - Inference Backend Management: user-guide/inference-backend-management.md
+          - Built-in Inference Backends: user-guide/built-in-inference-backends.md
+          - Compatibility Check: user-guide/compatibility-check.md
+          - Model File management: user-guide/model-file-management.md
+          - Cluster Management: user-guide/cluster-management.md
+          - Cloud Credential Management: user-guide/cloud-credential-management.md
+          - OpenAI Compatible APIs: user-guide/openai-compatible-apis.md
+          - Image Generation APIs: user-guide/image-generation-apis.md
+          - Rerank API: user-guide/rerank-api.md
+          - API Key Management: user-guide/api-key-management.md
+          - User Management: user-guide/user-management.md
+          - Single Sign-On (SSO) Authentication: user-guide/sso.md
+          - Observability: user-guide/observability.md
+      - Using Models:
+          - Using Large Language Models: using-models/using-large-language-models.md
+          - Using Vision Language Models: using-models/using-vision-language-models.md
+          - Using Embedding Models: using-models/using-embedding-models.md
+          - Using Reranker Models: using-models/using-reranker-models.md
+          - Using Image Generation Models: using-models/using-image-generation-models.md
+          - Using Audio Models: using-models/using-audio-models.md
+      - Tutorials:
+          - Running DeepSeek R1 671B with Distributed vLLM: tutorials/running-deepseek-r1-671b-with-distributed-vllm.md
+          - Running DeepSeek R1 671B with Distributed Ascend Mindie: tutorials/running-deepseek-r1-671b-with-distributed-ascend-mindie.md
+          - Inference On CPUs: tutorials/inference-on-cpus.md
+          - Inference with Tool Calling: tutorials/inference-with-tool-calling.md
+          - Using Custom Inference Backend: tutorials/using-custom-backends.md
+          - Adding a GPU Cluster Using DigitalOcean: tutorials/adding-gpucluster-using-digitalocean.md
+          - Adding a GPU Cluster Using Kubernetes: tutorials/adding-gpucluster-using-kubernetes.md
+      - Integrations:
+          - OpenAI Compatible APIs: integrations/openai-compatible-apis.md
+          - Integrate with Dify: integrations/integrate-with-dify.md
+          - Integrate with RAGFlow: integrations/integrate-with-ragflow.md
+          - Integrate with CherryStudio: integrations/integrate-with-cherrystudio.md
+      - Architecture: architecture.md
+      - Scheduler: scheduler.md
+      - Troubleshooting: troubleshooting.md
+      - FAQ: faq.md
+      - API Reference: api-reference.md
+      - CLI Reference:
+          - Start: cli-reference/start.md
+          - Download Tools: cli-reference/download-tools.md
+          - Reload Config: cli-reference/reload-config.md
+          - List Images: cli-reference/list-images.md
+          - Save Images: cli-reference/save-images.md
+          - Load Images: cli-reference/load-images.md
+          - Copy Images: cli-reference/copy-images.md
+      - Environment Variables: environment-variables.md
+  - Inference Performance Lab:
+      - Overview: performance-lab/overview.md
+      - Optimizing Throughput:
+          - GLM-4.5-Air:
+              - A100: performance-lab/glm-4.5-air/a100.md
+              - H100: performance-lab/glm-4.5-air/h100.md
+          - GLM-4.x:
+              - A100: performance-lab/glm-4.x/a100.md
+              - H100: performance-lab/glm-4.x/h100.md
+              - H200: performance-lab/glm-4.x/h200.md
+          - GPT-OSS-20B:
+              - A100: performance-lab/gpt-oss-20b/a100.md
+              - H100: performance-lab/gpt-oss-20b/h100.md
+          - GPT-OSS-120B:
+              - A100: performance-lab/gpt-oss-120b/a100.md
+              - H100: performance-lab/gpt-oss-120b/h100.md
+          - DeepSeek-R1:
+              - H200: performance-lab/deepseek-r1/h200.md
+          - DeepSeek-V3.2:
+              - H200: performance-lab/deepseek-v3.2/h200.md
+          - Qwen3-8B:
+              - 910B: performance-lab/qwen3-8b/910b.md
+          - Qwen3-14B:
+              - A100: performance-lab/qwen3-14b/a100.md
+              - H100: performance-lab/qwen3-14b/h100.md
+          - Qwen3-32B:
+              - A100: performance-lab/qwen3-32b/a100.md
+              - H100: performance-lab/qwen3-32b/h100.md
+          - Qwen3-30B-A3B:
+              - 910B: performance-lab/qwen3-30b-a3b/910b.md
+          - Qwen3-235B-A22B:
+              - A100: performance-lab/qwen3-235b-a22b/a100.md
+              - H100: performance-lab/qwen3-235b-a22b/h100.md
+      - Optimizing Latency:
+          - Qwen3-8B:
+              - H100: performance-lab/qwen3-8b/h100-latency.md
+      - References:
+          - The Impact of Quantization on vLLM Inference Performance: performance-lab/references/the-impact-of-quantization-on-vllm-inference-performance.md
+          - Evaluating LMCache Prefill Acceleration in vLLM: performance-lab/references/evaluating-lmcache-prefill-acceleration-in-vllm.md
