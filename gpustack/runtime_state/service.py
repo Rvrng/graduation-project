@@ -34,7 +34,7 @@ def _extract_power_watts(obj) -> Optional[float]:
     one place makes the state object ready for future detector/exporter extensions.
     """
 
-    for attr in ("power_watts", "power", "power_draw", "power_usage"):
+    for attr in ("power_watts", "power_used", "power_draw", "power_usage", "power"):
         value = getattr(obj, attr, None)
         if value is None:
             continue
@@ -141,6 +141,7 @@ async def get_current_state(
             if gpu_util is not None:
                 gpu_util_samples.append(gpu_util)
 
+            gpu_power_watts = _extract_power_watts(gpu)
             gpu_states.append(
                 GPUState(
                     gpu_index=int(gpu.index or 0),
@@ -150,7 +151,7 @@ async def get_current_state(
                     vram_used=gpu_used,
                     vram_allocated=gpu_allocated,
                     vram_allocatable=gpu_allocatable,
-                    power_watts=_extract_power_watts(gpu),
+                    power_watts=gpu_power_watts,
                 )
             )
 
@@ -162,6 +163,13 @@ async def get_current_state(
                 ram_total - _safe_int(allocatable.ram) - _safe_int(worker.system_reserved.ram),
                 0,
             )
+
+        gpu_power_samples = [
+            gpu.power_watts for gpu in gpu_states if gpu.power_watts is not None
+        ]
+        worker_power_watts = _extract_power_watts(worker.status)
+        if worker_power_watts is None and gpu_power_samples:
+            worker_power_watts = sum(gpu_power_samples)
 
         state.workers[worker.id] = WorkerState(
             worker_id=worker.id,
@@ -177,7 +185,7 @@ async def get_current_state(
             vram_total=total_vram,
             vram_used=used_vram,
             vram_allocatable=allocatable_vram,
-            power_watts=_extract_power_watts(worker.status),
+            power_watts=worker_power_watts,
             gpus=gpu_states,
         )
 

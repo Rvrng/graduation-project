@@ -43,7 +43,8 @@ from gpustack.server.controllers import (
 )
 from gpustack.server.db import async_session
 from gpustack.server.init_db import init_db, get_query_count
-from gpustack.scheduler.scheduler import Scheduler
+# from gpustack.scheduler.scheduler import Scheduler
+from gpustack.runtime_scheduler.scheduler import RuntimeAwareScheduler
 from gpustack.server.system_load import SystemLoadCollector
 from gpustack.server.update_check import UpdateChecker
 from gpustack.server.usage_buffer import flush_usage_to_db
@@ -203,7 +204,8 @@ class Server:
         logger.debug("Data initialization completed.")
 
     def _start_scheduler(self):
-        scheduler = Scheduler(self._config)
+        # scheduler = Scheduler(self._config)
+        scheduler = RuntimeAwareScheduler(self._config)
         self._create_async_task(scheduler.start())
 
         logger.debug("Scheduler started.")

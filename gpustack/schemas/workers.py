@@ -131,6 +131,10 @@ class GPUDeviceInfo(BaseModel):
     """
     Temperature of the GPU device in Celsius.
     """
+    power_watts: Optional[float] = Field(default=None)
+    """
+    Current power consumption of the GPU device in watts.
+    """
     network: Optional[GPUNetworkInfo] = Field(sa_column=Column(JSON), default=None)
     """
     Network information of the GPU device, mainly for Ascend devices.
