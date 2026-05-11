@@ -75,6 +75,7 @@ class InstanceState(BaseModel):
     gpu_indexes: List[int] = Field(default_factory=list)
     claimed_ram: int = 0
     claimed_vram: int = 0
+    resident_seconds: float = 0.0
     instance_qps_10s: float = 0.0
     instance_inflight: int = 0
     recent_avg_prompt_tokens: float = 0.0

@@ -1,5 +1,6 @@
 import re
 import asyncio
+import time
 from typing import AsyncGenerator, List, Optional, Tuple
 import aiohttp
 import logging
@@ -43,12 +44,16 @@ from gpustack.runtime_state import (
     request_finished,
     request_started,
 )
+from gpustack.runtime_state.types import RequestAppMeta
+from gpustack.runtime_scheduler.deployer import is_instance_draining
+from gpustack.runtime_scheduler.request_scheduler import RuntimeAwareRequestScheduler
 from gpustack.utils.network import use_proxy_env_for_url
 
 
 logger = logging.getLogger(__name__)
 
 load_balancer = LoadBalancer()
+runtime_request_scheduler = RuntimeAwareRequestScheduler()
 
 
 router = APIRouter()
@@ -141,9 +146,11 @@ async def proxy_request_by_model(
     current_request.model_id = model.id
     runtime_request_id = await request_started(current_request)
     request.state.runtime_request_id = runtime_request_id
+    request.state.runtime_started_perf = time.perf_counter()
 
     try:
-        instance = await get_running_instance(session, model.id)
+        # instance = await get_running_instance(session, model.id)
+        instance = await get_running_instance(session, model.id, current_request)
         await request_bound(
             runtime_request_id,
             model_id=model.id,
@@ -283,6 +290,17 @@ async def _stream_response_chunks(
         yield _process_line(chunk_buffer)
 
 
+def _runtime_request_id(request: Request) -> Optional[str]:
+    return getattr(request.state, "runtime_request_id", None)
+
+
+def _elapsed_runtime_ms(request: Request) -> Optional[float]:
+    started_perf = getattr(request.state, "runtime_started_perf", None)
+    if started_perf is None:
+        return None
+    return max((time.perf_counter() - started_perf) * 1000, 0.0)
+
+
 def _process_line(line_bytes: bytes) -> str:
     """Process a line of bytes to ensure it is properly formatted for streaming."""
     line = line_bytes.decode("utf-8").strip()
@@ -307,6 +325,7 @@ async def handle_streaming_request(
         body_json["stream_options"] = {"include_usage": True}
 
     async def stream_generator():
+        ttft_ms = None
         try:
             use_proxy_env = use_proxy_env_for_url(url)
             http_client: aiohttp.ClientSession = (
@@ -323,12 +342,36 @@ async def handle_streaming_request(
                 timeout=timeout,
             ) as resp:
                 if resp.status >= 400:
+                    await request_finished(
+                        _runtime_request_id(request),
+                        ttft_ms=_elapsed_runtime_ms(request),
+                        ok=False,
+                    )
                     yield await resp.read(), resp.headers, resp.status
                     return
 
                 async for chunk in _stream_response_chunks(resp):
+                    if ttft_ms is None:
+                        ttft_ms = _elapsed_runtime_ms(request)
                     yield chunk, resp.headers, resp.status
+                await request_finished(
+                    _runtime_request_id(request),
+                    ttft_ms=ttft_ms,
+                    ok=True,
+                )
+        except asyncio.CancelledError:
+            await request_finished(
+                _runtime_request_id(request),
+                ttft_ms=ttft_ms,
+                ok=False,
+            )
+            raise
         except aiohttp.ClientError as e:
+            await request_finished(
+                _runtime_request_id(request),
+                ttft_ms=ttft_ms,
+                ok=False,
+            )
             error_response = OpenAIAPIErrorResponse(
                 error=OpenAIAPIError(
                     message=f"Service unavailable. Please retry your requests after a brief wait. Original error: {e}",
@@ -338,6 +381,11 @@ async def handle_streaming_request(
             )
             yield error_response.model_dump_json(), {}, status.HTTP_503_SERVICE_UNAVAILABLE
         except Exception as e:
+            await request_finished(
+                _runtime_request_id(request),
+                ttft_ms=ttft_ms,
+                ok=False,
+            )
             error_response = OpenAIAPIErrorResponse(
                 error=OpenAIAPIError(
                     message=f"Internal server error: {e}",
@@ -378,7 +426,13 @@ async def handle_standard_request(
         data=form_data,
         timeout=timeout,
     ) as response:
+        ttft_ms = _elapsed_runtime_ms(request)
         content = await response.read()
+        await request_finished(
+            _runtime_request_id(request),
+            ttft_ms=ttft_ms,
+            ok=response.status < 400,
+        )
         return Response(
             status_code=response.status,
             headers=dict(response.headers),
@@ -398,7 +452,11 @@ def filter_headers(headers):
     }
 
 
-async def get_running_instance(session: AsyncSession, model_id: int):
+async def get_running_instance(
+    session: AsyncSession,
+    model_id: int,
+    current_request: Optional[RequestAppMeta] = None,
+):
     running_instances = await ModelInstanceService(session).get_running_instances(
         model_id
     )
@@ -407,7 +465,49 @@ async def get_running_instance(session: AsyncSession, model_id: int):
             message="No running instances available",
             is_openai_exception=True,
         )
-    return await load_balancer.get_instance(running_instances)
+    if current_request is not None:
+        try:
+            candidates = await runtime_request_scheduler.filter_candidates(
+                session=session,
+                current_request=current_request,
+                running_instances=running_instances,
+            )
+            if candidates:
+                pareto_candidates = runtime_request_scheduler.pareto_front(candidates)
+                selected_candidate = await runtime_request_scheduler.select_candidate(
+                    pareto_candidates,
+                    current_request,
+                )
+                if selected_candidate is not None:
+                    return selected_candidate.instance
+                # return await load_balancer.get_instance(
+                #     [candidate.instance for candidate in pareto_candidates]
+                # )
+                return await load_balancer.get_instance(
+                    [candidate.instance for candidate in pareto_candidates]
+                )
+            logger.warning(
+                "Runtime-aware request hard filtering found no candidates for "
+                "model_id=%s; falling back to round-robin.",
+                model_id,
+            )
+        except Exception as e:
+            logger.warning(
+                "Runtime-aware request hard filtering failed for model_id=%s, "
+                "falling back to round-robin: %s",
+                model_id,
+                e,
+            )
+    routable_instances = [
+        instance for instance in running_instances if not is_instance_draining(instance.id)
+    ]
+    if not routable_instances:
+        raise ServiceUnavailableException(
+            message="No routable running instances available",
+            is_openai_exception=True,
+        )
+    # return await runtime_request_scheduler.select_instance(running_instances)
+    return await load_balancer.get_instance(routable_instances)
 
 
 def mutate_request(

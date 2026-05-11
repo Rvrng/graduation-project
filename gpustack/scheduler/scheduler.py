@@ -386,6 +386,36 @@ async def find_candidate(
                 - A list of messages for the scheduling process.
     """
 
+    from gpustack.runtime_scheduler.deployer import (
+        consume_model_placement_pin,
+        peek_model_placement_pin,
+    )
+
+    original_workers = list(workers)
+    placement_pin = peek_model_placement_pin(model.id)
+    if placement_pin is not None:
+        workers = [
+            worker for worker in workers if worker.id == placement_pin.target_worker_id
+        ]
+        if not workers:
+            if not placement_pin.strict:
+                consume_model_placement_pin(model.id, placement_pin.target_worker_id)
+                logger.info(
+                    "Runtime non-strict placement pin ignored for model_id=%s "
+                    "target_worker_id=%s reason=%s because the target worker is "
+                    "not available.",
+                    model.id,
+                    placement_pin.target_worker_id,
+                    placement_pin.reason,
+                )
+                placement_pin = None
+                workers = original_workers
+            else:
+                return None, [
+                    "Runtime placement pin target worker "
+                    f"{placement_pin.target_worker_id} is not available."
+                ]
+
     # Filter workers.
     filters = [
         ClusterFilter(model),
@@ -439,6 +469,28 @@ async def find_candidate(
 
     # Pick the highest score candidate.
     candidate = pick_highest_score_candidate(candidates)
+    if candidate is None and placement_pin is not None and not placement_pin.strict:
+        consume_model_placement_pin(model.id, placement_pin.target_worker_id)
+        logger.info(
+            "Runtime non-strict placement pin ignored for model_id=%s "
+            "target_worker_id=%s reason=%s because the target worker did not "
+            "produce a schedulable candidate. Falling back to original placement.",
+            model.id,
+            placement_pin.target_worker_id,
+            placement_pin.reason,
+        )
+        return await find_candidate(config, model, original_workers, model_instances)
+
+    if candidate is not None and placement_pin is not None:
+        consume_model_placement_pin(model.id, candidate.worker.id)
+        logger.info(
+            "Runtime placement pin consumed for model_id=%s target_worker_id=%s "
+            "source_instance_id=%s reason=%s.",
+            model.id,
+            candidate.worker.id,
+            placement_pin.source_instance_id,
+            placement_pin.reason,
+        )
 
     # Collect messages.
     if candidate is None and len(workers) > 0:

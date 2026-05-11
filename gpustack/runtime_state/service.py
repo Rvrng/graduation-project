@@ -26,6 +26,18 @@ def _safe_int(value: Optional[int]) -> int:
     return int(value or 0)
 
 
+def _state_value(value) -> str:
+    return getattr(value, "value", str(value))
+
+
+def _seconds_since(value: Optional[datetime], now: datetime) -> float:
+    if value is None:
+        return 0.0
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return max((now - value).total_seconds(), 0.0)
+
+
 def _extract_power_watts(obj) -> Optional[float]:
     """
     Best-effort power extraction.
@@ -90,8 +102,9 @@ async def get_current_state(
         options=[selectinload(ModelInstance.model)],
     )
 
+    now = datetime.now(timezone.utc)
     state = SchedulingState(
-        generated_at=datetime.now(timezone.utc),
+        generated_at=now,
         current_request=current_request,
     )
 
@@ -174,7 +187,7 @@ async def get_current_state(
         state.workers[worker.id] = WorkerState(
             worker_id=worker.id,
             worker_name=worker.name,
-            state=str(worker.state),
+            state=_state_value(worker.state),
             cpu_utilization_rate=getattr(worker.status.cpu, "utilization_rate", None),
             ram_total=ram_total,
             ram_used=ram_used,
@@ -201,10 +214,14 @@ async def get_current_state(
             instance_id=instance.id,
             model_id=instance.model_id,
             worker_id=instance.worker_id,
-            state=str(instance.state),
+            state=_state_value(instance.state),
             gpu_indexes=list(instance.gpu_indexes or []),
             claimed_ram=claimed_ram,
             claimed_vram=claimed_vram,
+            resident_seconds=_seconds_since(
+                instance.last_restart_time or instance.created_at,
+                now,
+            ),
             instance_qps_10s=app_metrics["qps_10s"],
             instance_inflight=app_metrics["inflight"],
             recent_avg_prompt_tokens=app_metrics["recent_avg_prompt_tokens"],
